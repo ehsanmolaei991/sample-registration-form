@@ -7,51 +7,57 @@
       <input
         id="description"
         type="text"
-        v-model="text"
-        @input="validateText"
+        v-model="textValue"
         class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        :class="{ 'border-red-500': !isValid && text }"
+        :class="{ 'border-red-500': !balanced && textValue }"
       />
-      <p :class="[
-        'text-sm',
-        isValid ? 'text-green-600' : 'text-red-600'
-      ]">
-        {{ message }}
+      <p :class="['text-sm', balanced ? 'text-green-600' : 'text-red-600']">
+        {{ balanced ? "The text is balanced." : "The text is not balanced." }}
       </p>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script>
+export default {
+  name: "DescriptionInput",
+  data() {
+    return {
+      textValue: "",    
+      balanced: true,   
+      debounceId: null, 
+    };
+  },
+  watch: {
+    textValue() {
+      clearTimeout(this.debounceId);
+      this.debounceId = setTimeout(this.isBalanced, 50);
+    },
+  },
+  methods: {
+    isBalanced() {
+      const pairs = {
+        ")": "(",
+        "]": "[",
+        "}": "{",
+      };
+      const openBrackets = new Set(Object.values(pairs));
+      const stack = [];
 
-const text = ref('')
-const isValid = ref(true)
-const message = computed(() => isValid.value ? 'The text is balanced.' : 'The text is not balanced.')
+      for (let char of this.textValue) {
+        if (pairs[char]) {
+          if (stack.length === 0 || stack.pop() !== pairs[char]) {
+            this.balanced = false;
+            return;
+          }
+        }
+        else if (openBrackets.has(char)) {
+          stack.push(char);
+        }
+      }
 
-const isBalanced = (str) => {
-  const stack = []
-  const openBrackets = '({['
-  const closeBrackets = ')}]'
-  const pairs = {
-    ')': '(',
-    '}': '{',
-    ']': '['
-  }
-
-  for (let char of str) {
-    if (openBrackets.includes(char)) {
-      stack.push(char)
-    } else if (closeBrackets.includes(char)) {
-      if (stack.length === 0) return false
-      if (stack.pop() !== pairs[char]) return false
-    }
-  }
-
-  return stack.length === 0
-}
-
-const validateText = () => {
-  isValid.value = isBalanced(text.value)
-}
+      this.balanced = stack.length === 0;
+    },
+  },
+};
 </script>

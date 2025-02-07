@@ -1,4 +1,4 @@
-import Description from '../DescriptionForm.vue'
+import Description from '../Description.vue'
 const balancedMessage = 'The text is balanced.'
 const UnbalancedMessage = 'The text is not balanced.'
 
