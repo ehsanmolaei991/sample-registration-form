@@ -14,17 +14,31 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import './commands'
+import "./commands";
 
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
 // Import global styles
-import '@/assets/main.css'
+import "@/assets/main.css";
 
-import { mount } from 'cypress/vue'
+import { createPinia, setActivePinia } from "pinia";
+import { mount } from "cypress/vue";
+
+Cypress.Commands.add("mountWithPinia", (component, options = {}) => {
+  const pinia = createPinia();
+  setActivePinia(pinia); 
+
+  return mount(component, {
+    global: {
+      plugins: [pinia],
+    },
+    ...options,
+  });
+});
 
 Cypress.Commands.add('mount', mount)
+
 
 // Example use:
 // cy.mount(MyComponent)

@@ -5,9 +5,9 @@ const validemail= 'user@local.test'
 
 describe('Wizard Component | src/components/Wizard.vue', () => {
   beforeEach(() => {
-    cy.mount(Wizard)
+    cy.mountWithPinia(Wizard)
   })
-  
+
   context('Username', ()=>{
     context('Validation', ()=>{
       it('Username validation works on empty username', () => {

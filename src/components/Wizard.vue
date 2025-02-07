@@ -13,7 +13,7 @@
           id="username"
           name="username"
           v-model="formData.username"
-          label="Username"
+          label="Username:"
           placeholder="Enter username"
           required
           :error="formErrors.username"
@@ -28,7 +28,7 @@
           name="email"
           type="email"
           v-model="formData.email"
-          label="Email"
+          label="Email:"
           placeholder="Enter email"
           required
           :error="formErrors.email"
@@ -52,110 +52,133 @@
         >
           Previous
         </BaseButton>
-        <BaseButton
-          id="btn-next"
-          variant="primary"
-          @click="nextStep"
-          :disabled="!canProceed"
-        >
-          {{ isLastStep ? 'Submit' : 'Next' }}
-        </BaseButton>
+        <div class="flex items-center gap-2">
+          <BaseButton
+            id="btn-next"
+            variant="primary"
+            :disabled="currentStepIndex === steps?.length - 1"
+            @click="nextStep"
+          >
+            Next
+          </BaseButton>
+          <BaseButton
+            v-if="currentStepIndex === steps?.length - 1"
+            id="btn-submit"
+            variant="primary"
+            @click="handleSubmit"
+          >
+            Submit
+          </BaseButton>
+        </div>
       </div>
     </form>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import Description from '@/components/DescriptionForm.vue';
-import BaseInput from '@/components/ui/BaseInput.vue';
-import BaseButton from '@/components/ui/BaseButton.vue';
-import { useAuthStore } from '@/stores/auth';
+<script>
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import Description from "@/components/DescriptionForm.vue";
+import BaseInput from "@/components/ui/BaseInput.vue";
+import BaseButton from "@/components/ui/BaseButton.vue";
+import { useAuthStore } from "@/stores/auth";
 
-const router = useRouter();
-const auth = useAuthStore();
+export default {
+  components: {
+    Description,
+    BaseInput,
+    BaseButton,
+  },
 
-const steps = ['username', 'email', 'review'];
-const currentStepIndex = ref(0);
-const formData = ref({
-  username: '',
-  email: ''
-});
+  setup() {
+    const router = useRouter();
+    const auth = useAuthStore();
 
-const formErrors = ref({
-  username: '',
-  email: ''
-});
+    const steps = ref(["username", "email", "review"]);
+    const currentStep = ref("username");
+    const formData = ref({
+      username: "",
+      email: "",
+    });
+    const formErrors = ref({
+      username: "",
+      email: "",
+    });
 
-onMounted(() => {
-  if (auth.isLoggedIn) {
-    router.push('/dashboard');
-  }
-});
+    const currentStepIndex = computed(() =>
+      steps.value.indexOf(currentStep.value)
+    );
 
-const currentStep = computed(() => steps[currentStepIndex.value]);
-const isLastStep = computed(() => currentStepIndex.value === steps.length - 1);
+    const currentStepTitle = computed(() => {
+      const titles = {
+        username: "Create Username",
+        email: "Enter Email",
+        review: "Step: review information",
+      };
+      return titles[currentStep.value];
+    });
 
-const currentStepTitle = computed(() => {
-  const titles = {
-    username: 'Create Username',
-    email: 'Enter Email',
-    review: 'Review Information'
-  };
-  return titles[currentStep.value];
-});
+    const validateUsername = () => {
+      const usernamePattern = /^[a-zA-Z0-9._]{4,30}$/;
 
-const canProceed = computed(() => {
-  if (currentStep.value === 'username') {
-    return formData.value.username.length >= 3;
-  }
-  if (currentStep.value === 'email') {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(formData.value.email);
-  }
-  return true;
-});
+      if (!formData.value.username.match(usernamePattern)) {
+        formErrors.value.username = "Invalid Username.";
+        return true;
+      }
 
-const nextStep = () => {
-  if (isLastStep.value) {
-    handleSubmit();
-    return;
-  }
-  if (currentStepIndex.value < steps.length - 1) {
-    currentStepIndex.value++;
-  }
+      formErrors.value.username = "";
+      return false;
+    };
+
+    const validateEmail = () => {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!formData.value.email.match(emailPattern)) {
+        formErrors.value.email = "Invalid email address.";
+        return true;
+      }
+
+      formErrors.value.email = "";
+      return false;
+    };
+
+    const nextStep = () => {
+      if (currentStep.value === "username") {
+        validateUsername();
+        if (!formErrors.value.username) {
+          currentStep.value = "email";
+        }
+      } else if (currentStep.value === "email") {
+        validateEmail();
+        if (!formErrors.value.email) {
+          currentStep.value = "review";
+        }
+      }
+    };
+
+    const prevStep = () => {
+      const index = currentStepIndex.value;
+      if (index > 0) {
+        currentStep.value = steps.value[index - 1];
+      }
+    };
+
+    const handleSubmit = () => {
+      auth.login(formData.value);
+      router.push("/dashboard");
+    };
+
+    return {
+      currentStep,
+      currentStepIndex,
+      currentStepTitle,
+      formData,
+      formErrors,
+      steps,
+      prevStep,
+      nextStep,
+      handleSubmit,
+    };
+  },
 };
-
-const prevStep = () => {
-  if (currentStepIndex.value > 0) {
-    currentStepIndex.value--;
-  }
-};
-
-const validateForm = () => {
-  formErrors.value = {
-    username: '',
-    email: ''
-  };
-
-  if (formData.value.username.length < 3) {
-    formErrors.value.username = 'Username must be at least 3 characters long';
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.value.email)) {
-    formErrors.value.email = 'Please enter a valid email address';
-  }
-
-  return !formErrors.value.username && !formErrors.value.email;
-};
-
-const handleSubmit = () => {
-  if (!validateForm()) {
-    return;
-  }
-  auth.login(formData.value);
-  router.push('/dashboard');
-};
-</script> 
+</script>
