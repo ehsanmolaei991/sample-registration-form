@@ -26,7 +26,7 @@
         <BaseInput
           id="email"
           name="email"
-          type="email"
+          type="text"
           v-model="formData.email"
           label="Email:"
           placeholder="Enter email"
